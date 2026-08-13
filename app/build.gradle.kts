@@ -14,11 +14,25 @@ android {
         versionCode = 1
         versionName = "1.0"
     }
+    
+    // TADY JE TA OPRAVA PRO JAVU 17
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    
     buildFeatures {
         compose = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.4"
+    }
+}
+
+// TADY JE TA OPRAVA PRO KOTLIN
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+    kotlinOptions {
+        jvmTarget = "17"
     }
 }
 
