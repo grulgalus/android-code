@@ -3,8 +3,6 @@ name: CodeDroid X CI Build
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -20,9 +18,16 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: gradle
 
-    - name: Vygenerování Gradle wrapperu přímo na GitHubu
+    # Zde je ten trik! Použijeme ofiko GitHub akci, která 
+    # natvrdo nainstaluje Gradle 8.2, takže verze 9.7 nás už nebude otravovat.
+    - name: Setup Gradle 8.2
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: 8.2
+
+    # Teď když máme 100% zaručený Gradle 8.2, bezpečně vygenerujeme wrapper
+    - name: Vygeneruj Wrapper pro jistotu
       run: gradle wrapper --gradle-version 8.2
 
     - name: Grant execute permission for gradlew
