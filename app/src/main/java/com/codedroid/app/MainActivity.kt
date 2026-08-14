@@ -54,7 +54,6 @@ fun VSCodeWorkspace(viewModel: MainViewModel) {
                 ActivityIcon(Icons.Outlined.Folder, viewModel.activePanel == Panel.EXPLORER) { viewModel.updateActivePanel(Panel.EXPLORER) }
                 ActivityIcon(Icons.Outlined.AccountTree, viewModel.activePanel == Panel.GIT) { viewModel.updateActivePanel(Panel.GIT) }
                 ActivityIcon(Icons.Outlined.Extension, viewModel.activePanel == Panel.EXTENSIONS) { viewModel.updateActivePanel(Panel.EXTENSIONS) }
-                Spacer(modifier = Modifier.weight(1f))
                 ActivityIcon(Icons.Outlined.SmartToy, viewModel.activePanel == Panel.AI_AGENT) { viewModel.updateActivePanel(Panel.AI_AGENT) }
                 Spacer(modifier = Modifier.weight(1f))
                 ActivityIcon(Icons.Outlined.Settings, viewModel.activePanel == Panel.SETTINGS) { viewModel.updateActivePanel(Panel.SETTINGS) }
@@ -82,9 +81,11 @@ fun VSCodeWorkspace(viewModel: MainViewModel) {
                         Text("MainActivity.kt", color = VSCodeTheme.textHighlight, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                     }
                 }
+                
+                // NAŠE NOVÁ KOMPONENTA S OPRAVENOU SYNTAXÍ
                 CodeEditor(
-                    code = viewModel.codeText, onCodeChange = { viewModel.updateCode(it) }
-                    modifier = Modifier.fillMaxSize(),
+                    code = viewModel.codeText,
+                    onCodeChange = { viewModel.updateCode(it) }
                 )
             }
         }
