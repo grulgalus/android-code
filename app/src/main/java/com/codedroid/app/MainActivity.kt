@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.sp
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.codedroid.app.plugins.PluginManager.registerLoader(com.codedroid.app.plugins.QuickJsLoader())
+        com.codedroid.app.plugins.PluginManager.registerLoader(com.codedroid.app.plugins.TermuxBashLoader(this))
         // Registrace ofiko Plugin Loaderů
         com.codedroid.app.plugins.PluginManager.registerLoader(com.codedroid.app.plugins.QuickJsLoader())
         com.codedroid.app.plugins.PluginManager.registerLoader(com.codedroid.app.plugins.TermuxBashLoader(this))
