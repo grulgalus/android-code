@@ -5,7 +5,6 @@ import java.io.File
 data class FileItem(val name: String, val path: String, val isDirectory: Boolean)
 
 object FileHelper {
-    // Pro začátek načteme složku dokumentů, kam má appka vždy přístup
     fun getFilesInDir(path: String): List<FileItem> {
         val dir = File(path)
         if (!dir.exists() || !dir.isDirectory) return emptyList()
@@ -20,6 +19,17 @@ object FileHelper {
             File(path).readText()
         } catch (e: Exception) {
             "// Chyba při čtení souboru: ${e.message}"
+        }
+    }
+
+    // NOVÉ: Funkce pro zápis do souboru
+    fun saveFile(path: String, content: String): Boolean {
+        return try {
+            File(path).writeText(content)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 }

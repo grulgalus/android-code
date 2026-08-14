@@ -29,6 +29,28 @@ class MainViewModel : ViewModel() {
     }
 
     // Tady jsme to také upravili na private set pro čistotu
+    fun saveCurrentFile() {
+        if (currentFilePath != "Nedefinováno") {
+            val success = com.codedroid.app.FileHelper.saveFile(currentFilePath, codeText)
+            if (success) logToTerminal("ÚLOŽENO: $currentFilePath")
+            else logToTerminal("CHYBA: Nepodařilo se uložit soubor!")
+        }
+    }
+
+    fun runCurrentFile(context: android.content.Context) {
+        if (currentFilePath == "Nedefinováno") return
+        saveCurrentFile() // Vždy první uložíme
+        logToTerminal("SPOUŠTÍM: $currentFilePath")
+        
+        val cmd = when {
+            currentFilePath.endsWith(".py") -> "python $currentFilePath"
+            currentFilePath.endsWith(".sh") -> "bash $currentFilePath"
+            currentFilePath.endsWith(".js") -> "node $currentFilePath"
+            else -> "cat $currentFilePath"
+        }
+        com.codedroid.app.TermuxHelper.runCommand(context, cmd)
+    }
+
     fun loadFile(path: String) {
         currentFilePath = path
         codeText = com.codedroid.app.FileHelper.readFile(path)
