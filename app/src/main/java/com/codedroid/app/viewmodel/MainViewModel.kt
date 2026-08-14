@@ -1,5 +1,8 @@
 package com.codedroid.app.viewmodel
 
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.lifecycle.ViewModel
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -13,31 +16,17 @@ enum class Panel { EXPLORER, GIT, EXTENSIONS, AI_AGENT, SETTINGS }
 class MainViewModel : ViewModel() {
     var activePanel by mutableStateOf(Panel.EXPLORER)
         private set
-        
-    var codeText by mutableStateOf("// CodeDroid X Ready!\nfun main() {\n    println(\"Ahoj!\")\n}")
+    var codeText by mutableStateOf("// CodeDroid X Ready!\n")
         private set
-    
     var currentFilePath by mutableStateOf("Nedefinováno")
         private set
-
     var terminalLogs by mutableStateOf(listOf("> CodeDroid X inicializováno [${time()}]"))
         private set
 
-    fun updateActivePanel(panel: Panel) {
-        activePanel = panel
-    }
-
-    fun updateCode(newCode: String) {
-        codeText = newCode
-    }
-
-    fun appendCode(code: String) {
-        codeText += "\n$code"
-    }
-
-    fun logToTerminal(msg: String) {
-        terminalLogs = terminalLogs + "[${time()}] $msg"
-    }
+    fun updateActivePanel(panel: Panel) { activePanel = panel }
+    fun updateCode(newCode: String) { codeText = newCode }
+    fun appendCode(code: String) { codeText += "\n$code" }
+    fun logToTerminal(msg: String) { terminalLogs = terminalLogs + "[${time()}] $msg" }
 
     fun loadFile(path: String) {
         currentFilePath = path
@@ -45,26 +34,37 @@ class MainViewModel : ViewModel() {
         logToTerminal("Otevřen soubor: $path")
     }
 
-    fun saveCurrentFile() {
-        if (currentFilePath != "Nedefinováno") {
-            val success = com.codedroid.app.FileHelper.saveFile(currentFilePath, codeText)
-            if (success) logToTerminal("ÚLOŽENO: $currentFilePath")
-            else logToTerminal("CHYBA: Nepodařilo se uložit soubor!")
-        } else {
-            logToTerminal("CHYBA: Není otevřen žádný soubor k uložení.")
+    // NOVÉ: Otevření souboru přímo z Android Systému (když na něj klikneš)
+    fun loadFromUri(context: Context, uri: Uri) {
+        try {
+            val cursor = context.contentResolver.query(uri, null, null, null, null)
+            val nameIndex = cursor?.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            var name = "Soubor_z_OS"
+            if (cursor != null && cursor.moveToFirst() && nameIndex != null && nameIndex >= 0) {
+                name = cursor.getString(nameIndex)
+            }
+            cursor?.close()
+            
+            val content = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: ""
+            currentFilePath = name 
+            codeText = content
+            logToTerminal("Otevřen soubor z OS: $name")
+        } catch (e: Exception) {
+            logToTerminal("Chyba při otevírání z OS: ${e.message}")
         }
     }
 
-    fun runCurrentFile(context: android.content.Context) {
-        if (currentFilePath == "Nedefinováno") {
-            logToTerminal("CHYBA: Není otevřen žádný soubor ke spuštění.")
-            return
+    fun saveCurrentFile() {
+        if (currentFilePath != "Nedefinováno") {
+            if (com.codedroid.app.FileHelper.saveFile(currentFilePath, codeText)) logToTerminal("ÚLOŽENO: $currentFilePath")
+            else logToTerminal("CHYBA: Nepodařilo se uložit!")
         }
-        
-        saveCurrentFile() // Vždy první uložíme
+    }
+
+    fun runCurrentFile(context: Context) {
+        if (currentFilePath == "Nedefinováno") return
+        saveCurrentFile()
         logToTerminal("SPOUŠTÍM: $currentFilePath")
-        
-        // Rozhodneme, jaký příkaz poslat do Termuxu podle koncovky souboru
         val cmd = when {
             currentFilePath.endsWith(".py") -> "python $currentFilePath"
             currentFilePath.endsWith(".sh") -> "bash $currentFilePath"

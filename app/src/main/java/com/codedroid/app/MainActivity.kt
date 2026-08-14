@@ -1,6 +1,11 @@
 package com.codedroid.app
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -36,12 +41,32 @@ import com.codedroid.app.viewmodel.Panel
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Vyžádání plných práv na úložiště (FSM) pro Android 11+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
+            try {
+                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                intent.data = Uri.parse("package:$packageName")
+                startActivity(intent)
+            } catch (e: Exception) {}
+        } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            requestPermissions(arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE, android.Manifest.permission.READ_EXTERNAL_STORAGE), 100)
+        }
+
         PluginManager.registerLoader(com.codedroid.app.plugins.QuickJsLoader())
         PluginManager.registerLoader(com.codedroid.app.plugins.TermuxBashLoader(this))
+
+        val incomingUri = intent.data
 
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 val viewModel: MainViewModel = viewModel()
+                
+                // Pokud uživatel otevřel soubor kliknutím v OS
+                LaunchedEffect(incomingUri) {
+                    incomingUri?.let { viewModel.loadFromUri(this@MainActivity, it) }
+                }
+                
                 VSCodeWorkspace(viewModel)
             }
         }
@@ -52,12 +77,10 @@ class MainActivity : ComponentActivity() {
 fun VSCodeWorkspace(viewModel: MainViewModel) {
     var sidebarWidth by remember { mutableStateOf(260.dp) }
     val density = LocalDensity.current
-    val context = LocalContext.current // Potřebujeme pro Termux
+    val context = LocalContext.current
 
     Column(modifier = Modifier.fillMaxSize().background(VSCodeTheme.bgDark)) {
         Row(modifier = Modifier.weight(1f)) {
-            
-            // 1. ACTIVITY BAR
             NavigationRail(modifier = Modifier.width(50.dp), containerColor = VSCodeTheme.bgActivityBar) {
                 Spacer(modifier = Modifier.height(8.dp))
                 ActivityIcon(Icons.Outlined.Folder, viewModel.activePanel == Panel.EXPLORER) { viewModel.updateActivePanel(Panel.EXPLORER) }
@@ -68,7 +91,6 @@ fun VSCodeWorkspace(viewModel: MainViewModel) {
                 ActivityIcon(Icons.Outlined.Settings, viewModel.activePanel == Panel.SETTINGS) { viewModel.updateActivePanel(Panel.SETTINGS) }
             }
 
-            // 2. SIDEBAR
             Column(modifier = Modifier.width(sidebarWidth).background(VSCodeTheme.bgSidebar).fillMaxHeight()) {
                 Text(text = viewModel.activePanel.name, color = Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(16.dp))
                 Divider(color = VSCodeTheme.bgActivityBar)
@@ -83,61 +105,33 @@ fun VSCodeWorkspace(viewModel: MainViewModel) {
                 }
             }
             
-            // --- RESIZE HANDLE ---
-            Box(
-                modifier = Modifier.width(4.dp).fillMaxHeight().background(Color.Black.copy(alpha = 0.5f)).pointerInput(Unit) {
-                    detectHorizontalDragGestures { change, dragAmount ->
-                        change.consume()
-                        with(density) { sidebarWidth = (sidebarWidth + dragAmount.toDp()).coerceIn(150.dp, 500.dp) }
-                    }
+            Box(modifier = Modifier.width(4.dp).fillMaxHeight().background(Color.Black.copy(alpha = 0.5f)).pointerInput(Unit) {
+                detectHorizontalDragGestures { change, dragAmount ->
+                    change.consume()
+                    with(density) { sidebarWidth = (sidebarWidth + dragAmount.toDp()).coerceIn(150.dp, 500.dp) }
                 }
-            )
+            })
 
-            // 3. EDITOR
             Column(modifier = Modifier.weight(1f).fillMaxHeight().background(VSCodeTheme.bgDark)) {
-                // Horní lišta s názvem a tlačítky
                 Row(modifier = Modifier.fillMaxWidth().height(40.dp).background(Color(0xFF2D2D2D)), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.background(VSCodeTheme.bgDark).padding(horizontal = 16.dp).fillMaxHeight(), contentAlignment = Alignment.Center) {
                         Text(viewModel.currentFilePath.substringAfterLast("/"), color = VSCodeTheme.textHighlight, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                     }
-                    
-                    // Nástrojová tlačítka (Uložit a Spustit)
                     Row(modifier = Modifier.padding(end = 16.dp)) {
-                        IconButton(onClick = { viewModel.saveCurrentFile() }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Save, contentDescription = "Uložit", tint = Color.LightGray)
-                        }
-                        IconButton(onClick = { viewModel.runCurrentFile(context) }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "Spustit", tint = Color(0xFF9EFF7A))
-                        }
+                        IconButton(onClick = { viewModel.saveCurrentFile() }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Save, contentDescription = null, tint = Color.LightGray) }
+                        IconButton(onClick = { viewModel.runCurrentFile(context) }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color(0xFF9EFF7A)) }
                     }
                 }
-                CodeEditor(
-                    code = viewModel.codeText,
-                    onCodeChange = { 
-                        viewModel.updateCode(it) 
-                        DiscordManager.updatePresence(viewModel)
-                    }
-                )
+                CodeEditor(code = viewModel.codeText, onCodeChange = { viewModel.updateCode(it); DiscordManager.updatePresence(viewModel) })
             }
         }
 
-        // 4. TERMINAL
         Column(modifier = Modifier.fillMaxWidth().height(180.dp).background(VSCodeTheme.bgDark)) {
             Divider(color = VSCodeTheme.bgActivityBar, thickness = 1.dp)
-            Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("TERMINAL", color = Color.White, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+            Text("TERMINAL", color = Color.White, fontSize = 11.sp, modifier = Modifier.padding(16.dp, 8.dp), fontWeight = FontWeight.Bold)
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                items(viewModel.terminalLogs) { log -> Text(log, color = VSCodeTheme.terminalGreen, fontSize = 12.sp); Spacer(Modifier.height(2.dp)) }
             }
-            LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 4.dp)) {
-                items(viewModel.terminalLogs) { log ->
-                    Text(log, color = VSCodeTheme.terminalGreen, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
-                    Spacer(modifier = Modifier.height(2.dp))
-                }
-            }
-        }
-        
-        // 5. STATUS BAR
-        Row(modifier = Modifier.fillMaxWidth().height(24.dp).background(VSCodeTheme.bgStatusBar).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(if(DiscordManager.isEnabled) "Discord RPC: ZAPNUTO" else "Discord RPC: VYPNUTO", color = Color.White, fontSize = 11.sp)
         }
     }
 }
@@ -145,7 +139,7 @@ fun VSCodeWorkspace(viewModel: MainViewModel) {
 @Composable
 fun ActivityIcon(icon: ImageVector, isActive: Boolean, onClick: () -> Unit) {
     Box(modifier = Modifier.size(50.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        if (isActive) Box(modifier = Modifier.fillMaxHeight().width(2.dp).background(VSCodeTheme.bgStatusBar).align(Alignment.CenterStart))
+        if (isActive) Box(modifier = Modifier.fillMaxHeight().width(2.dp).background(Color(0xFF007ACC)).align(Alignment.CenterStart))
         Icon(icon, contentDescription = null, tint = if (isActive) Color.White else Color.Gray, modifier = Modifier.size(28.dp))
     }
 }

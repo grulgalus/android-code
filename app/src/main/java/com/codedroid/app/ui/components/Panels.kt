@@ -64,7 +64,7 @@ fun ExtensionsPanel(viewModel: MainViewModel) {
 fun AiAgentPanel(viewModel: MainViewModel) {
     var apiKey by remember { mutableStateOf("") }
     var prompt by remember { mutableStateOf("") }
-    val providers = listOf("OpenAI", "Anthropic", "Lokální (Ollama)")
+    val providers = listOf("OpenRouter", "Google Gemini", "OpenAI", "Anthropic", "Ollama")
     var selectedProvider by remember { mutableStateOf(providers[0]) }
 
     Column {

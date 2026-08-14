@@ -28,6 +28,7 @@ fun ExplorerPanel(viewModel: MainViewModel) {
 
     Column {
         Text("PRŮZKUMNÍK", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(bottom = 8.dp))
+        Button(onClick = { currentDir = "/storage/emulated/0"; files = com.codedroid.app.FileHelper.getFilesInDir(currentDir) }, modifier = Modifier.fillMaxWidth().padding(bottom=8.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333))) { Text("Otevřít Interní Úložiště", fontSize = 11.sp) }
         
         Text("Složka: ${currentDir.substringAfterLast("/")}", color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
 
