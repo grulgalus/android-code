@@ -121,6 +121,18 @@ fun SettingsPanel(viewModel: MainViewModel) {
         Divider(color = Color.DarkGray)
         Spacer(modifier = Modifier.height(16.dp))
         
+        Text("Integrace", color = Color.White, fontSize = 13.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = { 
+            com.codedroid.app.DiscordManager.isEnabled = !com.codedroid.app.DiscordManager.isEnabled 
+            viewModel.logToTerminal("Discord RPC: ${com.codedroid.app.DiscordManager.isEnabled}")
+        }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5865F2))) {
+            Text("Zapnout Discord Status", fontSize = 12.sp)
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Divider(color = Color.DarkGray)
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text("O aplikaci", color = Color.White, fontSize = 13.sp)
         Text("CodeDroid X - Verze 1.0\nBěží na Jetpack Compose", color = Color.Gray, fontSize = 12.sp)
     }

@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,10 +48,14 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun VSCodeWorkspace(viewModel: MainViewModel) {
+    // STAV PRO ŠÍŘKU SIDEBARU (Resizable podpora)
+    var sidebarWidth by remember { mutableStateOf(260.dp) }
+    val density = LocalDensity.current
+
     Column(modifier = Modifier.fillMaxSize().background(VSCodeTheme.bgDark)) {
         Row(modifier = Modifier.weight(1f)) {
             
-            // 1. ACTIVITY BAR
+            // 1. ACTIVITY BAR (Zcela vlevo)
             NavigationRail(modifier = Modifier.width(50.dp), containerColor = VSCodeTheme.bgActivityBar) {
                 Spacer(modifier = Modifier.height(8.dp))
                 ActivityIcon(Icons.Outlined.Folder, viewModel.activePanel == Panel.EXPLORER) { viewModel.updateActivePanel(Panel.EXPLORER) }
@@ -59,8 +66,8 @@ fun VSCodeWorkspace(viewModel: MainViewModel) {
                 ActivityIcon(Icons.Outlined.Settings, viewModel.activePanel == Panel.SETTINGS) { viewModel.updateActivePanel(Panel.SETTINGS) }
             }
 
-            // 2. SIDEBAR
-            Column(modifier = Modifier.width(260.dp).background(VSCodeTheme.bgSidebar).fillMaxHeight()) {
+            // 2. DYNAMICKÝ A RESIZOVATELNÝ SIDEBAR
+            Column(modifier = Modifier.width(sidebarWidth).background(VSCodeTheme.bgSidebar).fillMaxHeight()) {
                 Text(text = viewModel.activePanel.name, color = Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(16.dp))
                 Divider(color = VSCodeTheme.bgActivityBar)
                 Box(modifier = Modifier.padding(12.dp).fillMaxSize()) {
@@ -73,19 +80,39 @@ fun VSCodeWorkspace(viewModel: MainViewModel) {
                     }
                 }
             }
+            
+            // --- RESIZE HANDLE (Dragger uprostřed) ---
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .pointerInput(Unit) {
+                        detectHorizontalDragGestures { change, dragAmount ->
+                            change.consume()
+                            // Přepočet posunutí z pixelů na Dp
+                            with(density) {
+                                val newWidth = sidebarWidth + dragAmount.toDp()
+                                // Omezení, aby to uživatel neroztáhl moc nebo nezmenšil na nulu
+                                sidebarWidth = newWidth.coerceIn(150.dp, 500.dp)
+                            }
+                        }
+                    }
+            )
 
             // 3. EDITOR
             Column(modifier = Modifier.weight(1f).fillMaxHeight().background(VSCodeTheme.bgDark)) {
                 Row(modifier = Modifier.fillMaxWidth().height(40.dp).background(Color(0xFF2D2D2D))) {
                     Box(modifier = Modifier.background(VSCodeTheme.bgDark).padding(horizontal = 16.dp).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                        Text("MainActivity.kt", color = VSCodeTheme.textHighlight, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                        Text(viewModel.currentFilePath.substringAfterLast("/"), color = VSCodeTheme.textHighlight, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                     }
                 }
-                
-                // NAŠE NOVÁ KOMPONENTA S OPRAVENOU SYNTAXÍ
                 CodeEditor(
                     code = viewModel.codeText,
-                    onCodeChange = { viewModel.updateCode(it) }
+                    onCodeChange = { 
+                        viewModel.updateCode(it) 
+                        DiscordManager.updatePresence(viewModel) // Oznámení pro Discord při psaní
+                    }
                 )
             }
         }
@@ -106,7 +133,7 @@ fun VSCodeWorkspace(viewModel: MainViewModel) {
         
         // 5. STATUS BAR
         Row(modifier = Modifier.fillMaxWidth().height(24.dp).background(VSCodeTheme.bgStatusBar).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("CodeDroid X", color = Color.White, fontSize = 11.sp)
+            Text(if(DiscordManager.isEnabled) "Discord RPC: ZAPNUTO" else "Discord RPC: VYPNUTO", color = Color.White, fontSize = 11.sp)
         }
     }
 }
