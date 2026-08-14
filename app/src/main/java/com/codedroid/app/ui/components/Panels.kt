@@ -21,9 +21,6 @@ import java.io.File
 @Composable
 fun ExplorerPanel() {
     Column {
-        Text("🗂 CodeDroidX", color = Color.White, fontSize = 13.sp, modifier = Modifier.padding(vertical = 4.dp))
-        Text("  📄 build.gradle.kts", color = Color.Gray, fontSize = 13.sp, modifier = Modifier.padding(vertical = 4.dp))
-        Text("  📂 app", color = Color.White, fontSize = 13.sp, modifier = Modifier.padding(vertical = 4.dp))
     }
 }
 

@@ -14,6 +14,9 @@ class MainViewModel : ViewModel() {
     var activePanel by mutableStateOf(Panel.EXPLORER)
         private set
         
+    var currentFilePath by mutableStateOf("Nedefinováno")
+        private set
+
     var codeText by mutableStateOf("// CodeDroid X Ready!\nfun main() {\n    println(\"Ahoj!\")\n}")
         private set
     
@@ -26,6 +29,12 @@ class MainViewModel : ViewModel() {
     }
 
     // Tady jsme to také upravili na private set pro čistotu
+    fun loadFile(path: String) {
+        currentFilePath = path
+        codeText = com.codedroid.app.FileHelper.readFile(path)
+        logToTerminal("Otevřen soubor: $path")
+    }
+
     fun updateCode(newCode: String) {
         codeText = newCode
     }

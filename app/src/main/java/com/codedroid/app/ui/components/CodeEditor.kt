@@ -21,6 +21,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.codedroid.app.ui.theme.VSCodeTheme
 
+// Tady definujeme PŘESNÝ STYL, který budou sdílet čísla i text!
+private val editorTextStyle = androidx.compose.ui.text.TextStyle(
+    color = VSCodeTheme.textNormal,
+    fontFamily = FontFamily.Monospace,
+    fontSize = 14.sp,
+    lineHeight = 22.sp // Toto drží řádky přesně zarovnané
+)
+
 @Composable
 fun CodeEditor(code: String, onCodeChange: (String) -> Unit) {
     val lineCount = code.lines().size.coerceAtLeast(1)
@@ -29,14 +37,14 @@ fun CodeEditor(code: String, onCodeChange: (String) -> Unit) {
         
         // Leví pruh: Čísla řádků
         Column(
-            modifier = Modifier.width(36.dp).fillMaxHeight().background(VSCodeTheme.bgSidebar).padding(top = 8.dp),
+            modifier = Modifier.width(40.dp).fillMaxHeight().background(VSCodeTheme.bgSidebar).padding(top = 8.dp),
             horizontalAlignment = Alignment.End
         ) {
             for (i in 1..lineCount) {
                 Text(
-                    text = i.toString(), color = Color(0xFF858585), fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace, modifier = Modifier.padding(end = 8.dp),
-                    textAlign = TextAlign.End, lineHeight = 20.sp
+                    text = i.toString(),
+                    style = editorTextStyle.copy(color = Color(0xFF858585), textAlign = TextAlign.End),
+                    modifier = Modifier.padding(end = 8.dp)
                 )
             }
         }
@@ -45,20 +53,14 @@ fun CodeEditor(code: String, onCodeChange: (String) -> Unit) {
         BasicTextField(
             value = code,
             onValueChange = onCodeChange,
-            modifier = Modifier.fillMaxSize().padding(start = 8.dp, top = 8.dp),
-            textStyle = androidx.compose.ui.text.TextStyle(
-                color = VSCodeTheme.textNormal,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 14.sp,
-                lineHeight = 20.sp
-            ),
+            modifier = Modifier.fillMaxSize().padding(start = 8.dp, top = 8.dp), // Stejný top padding jako u čísel!
+            textStyle = editorTextStyle,
             cursorBrush = SolidColor(Color.White),
             visualTransformation = SyntaxHighlightTransformation()
         )
     }
 }
 
-// Třída, která dělá to barevné kouzlo bez toho, aby upravila reálný text
 class SyntaxHighlightTransformation : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         return TransformedText(highlightCode(text.text), OffsetMapping.Identity)
@@ -69,16 +71,12 @@ fun highlightCode(code: String): AnnotatedString {
     val keywords = listOf("fun", "val", "var", "import", "class", "package", "return", "if", "else", "for", "in")
     return buildAnnotatedString {
         append(code)
-        
-        // Zvýraznění klíčových slov (Modrá)
         keywords.forEach { keyword ->
             val regex = "\\b$keyword\\b".toRegex()
             regex.findAll(code).forEach { result ->
                 addStyle(SpanStyle(color = Color(0xFF569CD6)), result.range.first, result.range.last + 1)
             }
         }
-        
-        // Zvýraznění Stringů (Oranžová)
         val stringRegex = "\".*?\"".toRegex()
         stringRegex.findAll(code).forEach { result ->
             addStyle(SpanStyle(color = Color(0xFFCE9178)), result.range.first, result.range.last + 1)

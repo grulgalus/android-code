@@ -65,7 +65,7 @@ fun VSCodeWorkspace(viewModel: MainViewModel) {
                 Divider(color = VSCodeTheme.bgActivityBar)
                 Box(modifier = Modifier.padding(12.dp).fillMaxSize()) {
                     when (viewModel.activePanel) {
-                        Panel.EXPLORER -> ExplorerPanel()
+                        Panel.EXPLORER -> ExplorerPanel(viewModel)
                         Panel.GIT -> GitPanel(viewModel)
                         Panel.EXTENSIONS -> ExtensionsPanel(viewModel)
                         Panel.AI_AGENT -> AiAgentPanel(viewModel)
