@@ -79,11 +79,9 @@ fun VSCodeWorkspace(viewModel: MainViewModel) {
                         Text("MainActivity.kt", color = VSCodeTheme.textHighlight, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                     }
                 }
-                TextField(
-                    value = viewModel.codeText, onValueChange = { viewModel.updateCode(it) },
+                CodeEditor(
+                    code = viewModel.codeText, onCodeChange = { viewModel.updateCode(it) }
                     modifier = Modifier.fillMaxSize(),
-                    textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, color = VSCodeTheme.textNormal, fontSize = 14.sp),
-                    colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent)
                 )
             }
         }
