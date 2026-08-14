@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -22,18 +24,26 @@ import com.codedroid.app.viewmodel.MainViewModel
 @Composable
 fun ExplorerPanel(viewModel: MainViewModel) {
     val context = LocalContext.current
-    // Základní složka aplikace pro bezpečné testování
     var currentDir by remember { mutableStateOf(context.filesDir.absolutePath) }
     var files by remember { mutableStateOf(FileHelper.getFilesInDir(currentDir)) }
 
     Column {
         Text("PRŮZKUMNÍK", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(bottom = 8.dp))
-        Button(onClick = { currentDir = "/storage/emulated/0"; files = com.codedroid.app.FileHelper.getFilesInDir(currentDir) }, modifier = Modifier.fillMaxWidth().padding(bottom=8.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333))) { Text("Otevřít Interní Úložiště", fontSize = 11.sp) }
         
+        Button(
+            onClick = { 
+                currentDir = "/storage/emulated/0"
+                files = FileHelper.getFilesInDir(currentDir)
+            }, 
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333))
+        ) {
+            Text("Otevřít Interní Úložiště", fontSize = 11.sp)
+        }
+
         Text("Složka: ${currentDir.substringAfterLast("/")}", color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            // Tlačítko zpět, pokud nejsme v rootu
             item {
                 Row(modifier = Modifier.fillMaxWidth().clickable {
                     val parent = java.io.File(currentDir).parent
