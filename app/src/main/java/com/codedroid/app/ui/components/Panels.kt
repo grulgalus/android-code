@@ -61,24 +61,6 @@ fun ExtensionsPanel(viewModel: MainViewModel) {
 }
 
 @Composable
-fun AiAgentPanel(viewModel: MainViewModel) {
-    var apiKey by remember { mutableStateOf("") }
-    var prompt by remember { mutableStateOf("") }
-    val providers = listOf("OpenRouter", "Google Gemini", "OpenAI", "Anthropic", "Ollama")
-    var selectedProvider by remember { mutableStateOf(providers[0]) }
-
-    Column {
-        Text("VÝBĚR PROVIDERA", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(4.dp))
-        providers.forEach { provider ->
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
-                RadioButton(
-                    selected = (provider == selectedProvider),
-                    onClick = { selectedProvider = provider },
-                    colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF67E8F9), unselectedColor = Color.Gray)
-                )
-                Text(provider, color = Color.LightGray, fontSize = 12.sp)
-            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))

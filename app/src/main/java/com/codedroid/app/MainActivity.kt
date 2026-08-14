@@ -2,12 +2,10 @@ package com.codedroid.app
 
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.os.Environment
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -17,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,32 +38,23 @@ import com.codedroid.app.viewmodel.MainViewModel
 import com.codedroid.app.viewmodel.Panel
 
 class MainActivity : ComponentActivity() {
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Vyžádání plných práv na úložiště (FSM) pro Android 11+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
-            try {
-                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                intent.data = Uri.parse("package:$packageName")
-                startActivity(intent)
-            } catch (e: Exception) {}
-        } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            requestPermissions(arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE, android.Manifest.permission.READ_EXTERNAL_STORAGE), 100)
-        }
-
         PluginManager.registerLoader(com.codedroid.app.plugins.QuickJsLoader())
         PluginManager.registerLoader(com.codedroid.app.plugins.TermuxBashLoader(this))
-
-        val incomingUri = intent.data
 
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 val viewModel: MainViewModel = viewModel()
                 
-                // Pokud uživatel otevřel soubor kliknutím v OS
-                LaunchedEffect(incomingUri) {
-                    incomingUri?.let { viewModel.loadFromUri(this@MainActivity, it) }
+                // --- INTENT HANDLER (OS "Open with CodeDroid") ---
+                LaunchedEffect(intent) {
+                    val incomingUri = intent.data
+                    if (incomingUri != null) {
+                        viewModel.loadFromUri(this@MainActivity, incomingUri)
+                    }
                 }
                 
                 VSCodeWorkspace(viewModel)
@@ -118,7 +108,7 @@ fun VSCodeWorkspace(viewModel: MainViewModel) {
                         Text(viewModel.currentFilePath.substringAfterLast("/"), color = VSCodeTheme.textHighlight, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                     }
                     Row(modifier = Modifier.padding(end = 16.dp)) {
-                        IconButton(onClick = { viewModel.saveCurrentFile() }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Save, contentDescription = null, tint = Color.LightGray) }
+                        IconButton(onClick = { viewModel.saveCurrentFile(context) }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Save, contentDescription = null, tint = Color.LightGray) }
                         IconButton(onClick = { viewModel.runCurrentFile(context) }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color(0xFF9EFF7A)) }
                     }
                 }
