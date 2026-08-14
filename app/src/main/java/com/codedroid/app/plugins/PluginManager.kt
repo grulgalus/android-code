@@ -20,4 +20,9 @@ object PluginManager {
             "Error: Žádný Loader nenašel způsob, jak spustit $filePath"
         }
     }
+    
+    // TATO FUNKCE CHYBĚLA!
+    fun getAvailableEngines(): List<String> {
+        return loaders.map { it.engineName }
+    }
 }
