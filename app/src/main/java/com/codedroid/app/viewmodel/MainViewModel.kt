@@ -15,14 +15,17 @@ class MainViewModel : ViewModel() {
         private set
         
     var codeText by mutableStateOf("// CodeDroid X Ready!\nfun main() {\n    println(\"Ahoj!\")\n}")
+        private set
     
     var terminalLogs by mutableStateOf(listOf("> CodeDroid X inicializováno [${time()}]"))
         private set
 
-    fun setActivePanel(panel: Panel) {
+    // PŘEJMENOVÁNO, aby nekolidovalo s autogenerovaným "setActivePanel"
+    fun updateActivePanel(panel: Panel) {
         activePanel = panel
     }
 
+    // Tady jsme to také upravili na private set pro čistotu
     fun updateCode(newCode: String) {
         codeText = newCode
     }
