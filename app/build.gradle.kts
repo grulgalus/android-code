@@ -15,7 +15,6 @@ android {
         versionName = "1.0"
     }
     
-    // TADY JE TA OPRAVA PRO JAVU 17
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -29,11 +28,8 @@ android {
     }
 }
 
-// TADY JE TA OPRAVA PRO KOTLIN
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+    kotlinOptions { jvmTarget = "17" }
 }
 
 dependencies {
@@ -45,6 +41,9 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
-    // JGit pro Git operace na Androidu
+    
+    // Nativní Git
     implementation("org.eclipse.jgit:org.eclipse.jgit:6.8.0.202311291450-r")
+    // Nativní bezpečný JS plugin engine pro Google Play
+    implementation("app.cash.quickjs:quickjs-android:0.9.2")
 }
