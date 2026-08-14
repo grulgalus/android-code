@@ -8,7 +8,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-enum class Panel { EXPLORER, GIT, EXTENSIONS, AI_AGENT }
+enum class Panel { EXPLORER, GIT, EXTENSIONS, AI_AGENT, SETTINGS }
 
 class MainViewModel : ViewModel() {
     var activePanel by mutableStateOf(Panel.EXPLORER)

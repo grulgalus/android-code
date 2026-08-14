@@ -107,3 +107,24 @@ fun AiAgentPanel(viewModel: MainViewModel) {
         }
     }
 }
+
+@Composable
+fun SettingsPanel(viewModel: MainViewModel) {
+    Column {
+        Text("NASTAVENÍ", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text("Vzhled Editoru", color = Color.White, fontSize = 13.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = { viewModel.logToTerminal("Settings: Téma zatím nelze změnit.") }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333))) {
+            Text("Změnit téma (WIP)", fontSize = 12.sp)
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        Divider(color = Color.DarkGray)
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text("O aplikaci", color = Color.White, fontSize = 13.sp)
+        Text("CodeDroid X - Verze 1.0\nBěží na Jetpack Compose", color = Color.Gray, fontSize = 12.sp)
+    }
+}

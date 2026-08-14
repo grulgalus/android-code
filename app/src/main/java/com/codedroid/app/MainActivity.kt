@@ -56,6 +56,8 @@ fun VSCodeWorkspace(viewModel: MainViewModel) {
                 ActivityIcon(Icons.Outlined.Extension, viewModel.activePanel == Panel.EXTENSIONS) { viewModel.updateActivePanel(Panel.EXTENSIONS) }
                 Spacer(modifier = Modifier.weight(1f))
                 ActivityIcon(Icons.Outlined.SmartToy, viewModel.activePanel == Panel.AI_AGENT) { viewModel.updateActivePanel(Panel.AI_AGENT) }
+                Spacer(modifier = Modifier.weight(1f))
+                ActivityIcon(Icons.Outlined.Settings, viewModel.activePanel == Panel.SETTINGS) { viewModel.updateActivePanel(Panel.SETTINGS) }
             }
 
             // 2. SIDEBAR
@@ -68,6 +70,7 @@ fun VSCodeWorkspace(viewModel: MainViewModel) {
                         Panel.GIT -> GitPanel(viewModel)
                         Panel.EXTENSIONS -> ExtensionsPanel(viewModel)
                         Panel.AI_AGENT -> AiAgentPanel(viewModel)
+                        Panel.SETTINGS -> SettingsPanel(viewModel)
                     }
                 }
             }
