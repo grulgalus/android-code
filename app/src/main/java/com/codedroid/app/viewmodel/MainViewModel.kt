@@ -34,7 +34,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var terminalLogs by mutableStateOf(listOf("> CodeDroid X inicializováno [${time()}]"))
         private set
         
-    // Chatovací historie pro Cursor-style AI panel
     var chatHistory = mutableStateListOf<ChatMessage>()
         private set
 
@@ -94,38 +93,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-        com.codedroid.app.TermuxHelper.runCommand(context, cmd)
-    }
-
-    // Skutečná AI integrace (s historií chatu)
+    // FÁZE 10: Termux spouštěč
     fun runCurrentFile(context: Context) {
         if (currentFilePath == "Nedefinováno") {
             logToTerminal("CHYBA: Není otevřen žádný soubor ke spuštění.")
             return
         }
-        saveCurrentFile(context) // Nejdřív uložíme aktuální změny!
+        saveCurrentFile(context)
         logToTerminal("SPOUŠTÍM v Termuxu: $currentFilePath")
         com.codedroid.app.TermuxHelper.runCommand(context, currentFilePath)
     }
 
+    // FÁZE 8: Cursor-style AI Agent
     fun askAi(provider: String, prompt: String, apiKey: String) {
         logToTerminal("[$provider] Odesílám dotaz na server...")
-        settings.apiKey = apiKey // Uložení klíče
+        settings.apiKey = apiKey 
         
-        // Zapsání do chatu
         chatHistory.add(ChatMessage("user", prompt))
         chatHistory.add(ChatMessage("ai", "Generuji odpověď..."))
         
-        // Asynchronní volání API
         CoroutineScope(Dispatchers.Main).launch {
             val aiResponse = AiClient.queryOpenRouter(prompt, apiKey)
             
-            // Smažeme text "Generuji odpověď..."
             if (chatHistory.isNotEmpty() && chatHistory.last().role == "ai") {
                 chatHistory.removeLast()
             }
             
-            // Vložíme reálnou odpověď
             chatHistory.add(ChatMessage("ai", aiResponse))
             logToTerminal("[$provider] Odpověď přijata.")
         }
