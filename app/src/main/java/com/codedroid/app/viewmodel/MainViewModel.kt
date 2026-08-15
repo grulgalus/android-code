@@ -144,5 +144,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun appendCode(code: String) {
+        val tab = getActiveTab()
+        if (tab != null) {
+            openTabs[activeTabIndex] = tab.copy(content = tab.content + "\n" + code, isModified = true)
+        }
+    }
+
     private fun time(): String = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 }
