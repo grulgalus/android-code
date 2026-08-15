@@ -25,7 +25,7 @@ object AiClient {
 
             // TADY JE FIX PRO 400: Použijeme jiný spolehlivý model, který je zdarma
             val body = JSONObject().apply {
-                put("model", "google/gemini-2.0-flash-exp:free") 
+                put("model", "qwen/qwen-2.5-coder-32b-instruct:free") 
                 put("messages", JSONArray().put(JSONObject().apply {
                     put("role", "user")
                     put("content", prompt)
