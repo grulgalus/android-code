@@ -1,7 +1,5 @@
 package com.codedroid.app
 
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,12 +8,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,7 +29,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.codedroid.app.plugins.PluginManager
 import com.codedroid.app.ui.components.*
 import com.codedroid.app.ui.theme.VSCodeTheme
 import com.codedroid.app.viewmodel.MainViewModel
@@ -40,30 +37,9 @@ import com.codedroid.app.viewmodel.Panel
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        PluginManager.registerLoader(com.codedroid.app.plugins.QuickJsLoader())
-        PluginManager.registerLoader(com.codedroid.app.plugins.TermuxBashLoader(this))
-
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 val viewModel: MainViewModel = viewModel()
-                
-                // Automatická kontrola práv na všechny soubory pro Android 11+
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R && !android.os.Environment.isExternalStorageManager()) {
-                    try {
-                        val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                        intent.data = android.net.Uri.parse("package:$packageName")
-                        startActivity(intent)
-                    } catch(e: Exception) {}
-                }
-
-                LaunchedEffect(intent) {
-                    val incomingUri = intent.data
-                    if (incomingUri != null) {
-                        viewModel.loadFromUri(this@MainActivity, incomingUri)
-                    }
-                }
-                
                 VSCodeWorkspace(viewModel)
             }
         }
@@ -77,73 +53,107 @@ fun VSCodeWorkspace(viewModel: MainViewModel) {
     val context = LocalContext.current
 
     Column(modifier = Modifier.fillMaxSize().background(VSCodeTheme.bgDark)) {
+        
+        // HLAVNÍ PROSTOR
         Row(modifier = Modifier.weight(1f)) {
+            // VS CODE ACTIVITY BAR
             NavigationRail(modifier = Modifier.width(50.dp), containerColor = VSCodeTheme.bgActivityBar) {
                 Spacer(modifier = Modifier.height(8.dp))
                 ActivityIcon(Icons.Outlined.Folder, viewModel.activePanel == Panel.EXPLORER) { viewModel.updateActivePanel(Panel.EXPLORER) }
+                ActivityIcon(Icons.Outlined.Search, false) {}
                 ActivityIcon(Icons.Outlined.AccountTree, viewModel.activePanel == Panel.GIT) { viewModel.updateActivePanel(Panel.GIT) }
-                ActivityIcon(Icons.Outlined.Extension, viewModel.activePanel == Panel.EXTENSIONS) { viewModel.updateActivePanel(Panel.EXTENSIONS) }
-                ActivityIcon(Icons.Outlined.SmartToy, viewModel.activePanel == Panel.AI_AGENT) { viewModel.updateActivePanel(Panel.AI_AGENT) }
+                ActivityIcon(Icons.Outlined.AutoAwesome, viewModel.activePanel == Panel.AI_AGENT) { viewModel.updateActivePanel(Panel.AI_AGENT) }
                 Spacer(modifier = Modifier.weight(1f))
                 ActivityIcon(Icons.Outlined.Settings, viewModel.activePanel == Panel.SETTINGS) { viewModel.updateActivePanel(Panel.SETTINGS) }
             }
 
+            // VS CODE SIDEBAR
             Column(modifier = Modifier.width(sidebarWidth).background(VSCodeTheme.bgSidebar).fillMaxHeight()) {
-                Text(text = viewModel.activePanel.name, color = Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(16.dp))
-                Divider(color = VSCodeTheme.bgActivityBar)
-                Box(modifier = Modifier.padding(12.dp).fillMaxSize()) {
+                Text(text = viewModel.activePanel.name, color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp))
+                Box(modifier = Modifier.fillMaxSize()) {
                     when (viewModel.activePanel) {
                         Panel.EXPLORER -> ExplorerPanel(viewModel)
                         Panel.GIT -> GitPanel(viewModel)
-                        Panel.EXTENSIONS -> ExtensionsPanel(viewModel)
                         Panel.AI_AGENT -> AiAgentPanel(viewModel)
                         Panel.SETTINGS -> SettingsPanel(viewModel)
+                        else -> {}
                     }
                 }
             }
             
-            Box(modifier = Modifier.width(4.dp).fillMaxHeight().background(Color.Black.copy(alpha = 0.5f)).pointerInput(Unit) {
+            // DRAG BAR
+            Box(modifier = Modifier.width(2.dp).fillMaxHeight().background(Color(0xFF2B2B2B)).pointerInput(Unit) {
                 detectHorizontalDragGestures { change, dragAmount ->
                     change.consume()
                     with(density) { sidebarWidth = (sidebarWidth + dragAmount.toDp()).coerceIn(150.dp, 500.dp) }
                 }
             })
 
-            Column(modifier = Modifier.weight(1f).fillMaxHeight().background(VSCodeTheme.bgDark)) {
-                Row(modifier = Modifier.fillMaxWidth().height(40.dp).background(Color(0xFF2D2D2D)), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.background(VSCodeTheme.bgDark).padding(horizontal = 16.dp).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                        Text(viewModel.currentFilePath.substringAfterLast("/"), color = VSCodeTheme.textHighlight, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+            // PRAVÁ ČÁST (EDITOR + TERMINÁL)
+            Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                
+                // VS CODE TABS (Záložky)
+                LazyRow(modifier = Modifier.fillMaxWidth().height(35.dp).background(Color(0xFF252526)), verticalAlignment = Alignment.CenterVertically) {
+                    itemsIndexed(viewModel.openTabs) { index, tab ->
+                        val isActive = index == viewModel.activeTabIndex
+                        Row(
+                            modifier = Modifier.fillMaxHeight().background(if (isActive) VSCodeTheme.bgDark else Color.Transparent).clickable { viewModel.activeTabIndex = index }.padding(horizontal = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(tab.name + if(tab.isModified) " •" else "", color = if (isActive) Color(0xFF569CD6) else Color.Gray, fontSize = 13.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Icon(Icons.Default.Close, contentDescription = "Zavřít", tint = Color.Gray, modifier = Modifier.size(14.dp).clickable { viewModel.closeTab(index) })
+                        }
                     }
-                    Row(modifier = Modifier.padding(end = 16.dp)) {
-                        IconButton(onClick = { viewModel.saveCurrentFile(context) }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Save, contentDescription = null, tint = Color.LightGray) }
-                        IconButton(onClick = { viewModel.runCurrentFile(context) }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color(0xFF9EFF7A)) }
+                    // Ovládací prvky vpravo
+                    item {
+                        Row(modifier = Modifier.fillMaxWidth().padding(start = 16.dp)) {
+                            IconButton(onClick = { viewModel.isInlineAiVisible = !viewModel.isInlineAiVisible }, modifier = Modifier.size(28.dp)) { Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFFA78BFA)) }
+                            IconButton(onClick = { viewModel.saveCurrentFile(context) }, modifier = Modifier.size(28.dp)) { Icon(Icons.Default.Save, null, tint = Color.LightGray) }
+                            IconButton(onClick = { viewModel.runCurrentFile(context) }, modifier = Modifier.size(28.dp)) { Icon(Icons.Default.PlayArrow, null, tint = Color(0xFF89D185)) }
+                        }
                     }
                 }
-                CodeEditor(code = viewModel.codeText, onCodeChange = { viewModel.updateCode(it); DiscordManager.updatePresence(viewModel) })
+                
+                // BREADCRUMBS
+                Row(modifier = Modifier.fillMaxWidth().height(22.dp).background(VSCodeTheme.bgDark).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("CodeDroid X > ${viewModel.getActiveTab()?.name ?: "..."}", color = Color.Gray, fontSize = 11.sp)
+                }
+
+                // EDITOR
+                Box(modifier = Modifier.weight(1f)) {
+                    CodeEditor(viewModel)
+                }
+
+                // TERMINAL PANEL
+                Column(modifier = Modifier.fillMaxWidth().height(140.dp).background(VSCodeTheme.bgSidebar)) {
+                    Divider(color = Color(0xFF2B2B2B), thickness = 1.dp)
+                    Text("TERMINAL", color = Color.Gray, fontSize = 10.sp, modifier = Modifier.padding(12.dp, 6.dp))
+                    val listState = rememberLazyListState()
+                    val logs = viewModel.terminalLogs
+                    LaunchedEffect(logs.size) { if (logs.isNotEmpty()) listState.animateScrollToItem(logs.size - 1) }
+                    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
+                        items(logs) { Text(it, color = VSCodeTheme.terminalGreen, fontSize = 11.sp, fontFamily = FontFamily.Monospace); Spacer(Modifier.height(2.dp)) }
+                    }
+                }
             }
         }
 
-        // TADY JE OPRAVENÝ TERMINÁL
-        Column(modifier = Modifier.fillMaxWidth().height(160.dp).background(VSCodeTheme.bgDark)) {
-            Divider(color = VSCodeTheme.bgActivityBar, thickness = 1.dp)
-            Text("KONZOLE / LOGY", color = Color.White, fontSize = 11.sp, modifier = Modifier.padding(16.dp, 8.dp), fontWeight = FontWeight.Bold)
-            
-            val listState = rememberLazyListState()
-            val logs = viewModel.terminalLogs
-            
-            // KOUZLO PRO AUTO-SCROLL DOWN
-            LaunchedEffect(logs.size) {
-                if (logs.isNotEmpty()) {
-                    listState.animateScrollToItem(logs.size - 1)
-                }
+        // VS CODE STATUS BAR (Modrá lišta dole)
+        Row(modifier = Modifier.fillMaxWidth().height(22.dp).background(Color(0xFF007ACC)).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Code, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("main*", color = Color.White, fontSize = 11.sp)
+                Spacer(Modifier.width(16.dp))
+                Icon(Icons.Default.Sync, null, tint = Color.White, modifier = Modifier.size(12.dp))
             }
-            
-            LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-                items(logs) { log -> 
-                    // Nově používáme FontFamily.Monospace pro konzolový vzhled
-                    Text(log, color = VSCodeTheme.terminalGreen, fontSize = 12.sp, fontFamily = FontFamily.Monospace) 
-                    Spacer(Modifier.height(4.dp)) 
-                }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Ln 1, Col 1", color = Color.White, fontSize = 11.sp)
+                Spacer(Modifier.width(16.dp))
+                Text("UTF-8", color = Color.White, fontSize = 11.sp)
+                Spacer(Modifier.width(16.dp))
+                Text(viewModel.getActiveTab()?.name?.substringAfterLast(".")?.uppercase() ?: "TXT", color = Color.White, fontSize = 11.sp)
             }
         }
     }

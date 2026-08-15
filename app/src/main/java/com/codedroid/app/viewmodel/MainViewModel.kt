@@ -17,39 +17,65 @@ import com.codedroid.app.SettingsManager
 import com.codedroid.app.AiClient
 
 enum class Panel { EXPLORER, GIT, EXTENSIONS, AI_AGENT, SETTINGS }
-
 data class ChatMessage(val role: String, val content: String)
+data class EditorTab(val path: String, val name: String, var content: String, var isModified: Boolean = false)
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     val settings = SettingsManager(application)
 
     var activePanel by mutableStateOf(Panel.EXPLORER)
-        private set
-    var codeText by mutableStateOf("// CodeDroid X Ready!\n")
-        private set
-    var currentFilePath by mutableStateOf("Nedefinováno")
-        private set
-    var currentUri by mutableStateOf<Uri?>(null)
-        private set
     var terminalLogs by mutableStateOf(listOf("> CodeDroid X inicializováno [${time()}]"))
-        private set
-        
     var chatHistory = mutableStateListOf<ChatMessage>()
-        private set
+    
+    // VS Code Systém záložek
+    var openTabs = mutableStateListOf<EditorTab>()
+    var activeTabIndex by mutableStateOf(-1)
+    
+    // Cursor Inline AI
+    var isInlineAiVisible by mutableStateOf(false)
+
+    init {
+        // Výchozí prázdný soubor
+        openTabs.add(EditorTab("Bez_názvu.txt", "Bez_názvu.txt", "// Zde začíná tvůj kód...\n"))
+        activeTabIndex = 0
+    }
 
     fun updateActivePanel(panel: Panel) { activePanel = panel }
     
-    fun updateCode(newCode: String) { codeText = newCode }
-    
-    fun appendCode(code: String) { codeText += "\n$code" }
-    
+    fun getActiveTab(): EditorTab? = if (activeTabIndex in openTabs.indices) openTabs[activeTabIndex] else null
+
+    fun updateActiveContent(newCode: String) {
+        val tab = getActiveTab()
+        if (tab != null) {
+            // Aby Compose zaregistroval změnu, musíme objekt nahradit
+            openTabs[activeTabIndex] = tab.copy(content = newCode, isModified = true)
+        }
+    }
+
+    fun closeTab(index: Int) {
+        if (index in openTabs.indices) {
+            openTabs.removeAt(index)
+            if (activeTabIndex >= openTabs.size) activeTabIndex = openTabs.size - 1
+            if (openTabs.isEmpty()) {
+                openTabs.add(EditorTab("Bez_názvu.txt", "Bez_názvu.txt", ""))
+                activeTabIndex = 0
+            }
+        }
+    }
+
     fun logToTerminal(msg: String) { terminalLogs = terminalLogs + "[${time()}] $msg" }
 
     fun loadFile(path: String) {
-        currentFilePath = path
-        currentUri = null
-        codeText = com.codedroid.app.FileHelper.readFile(path)
-        logToTerminal("Otevřen soubor: $path")
+        val name = path.substringAfterLast("/")
+        val existingIndex = openTabs.indexOfFirst { it.path == path }
+        if (existingIndex != -1) {
+            activeTabIndex = existingIndex
+        } else {
+            val content = com.codedroid.app.FileHelper.readFile(path)
+            openTabs.add(EditorTab(path, name, content))
+            activeTabIndex = openTabs.size - 1
+        }
+        logToTerminal("Otevřen soubor: $name")
     }
 
     fun loadFromUri(context: Context, uri: Uri) {
@@ -63,64 +89,52 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             cursor?.close()
             
             val content = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: ""
-            currentFilePath = name 
-            currentUri = uri
-            codeText = content
-            logToTerminal("Otevřen soubor z Androidu: $name")
-        } catch (e: Exception) {
-            logToTerminal("Chyba při otevírání z OS: ${e.message}")
-        }
+            openTabs.add(EditorTab(name, name, content))
+            activeTabIndex = openTabs.size - 1
+        } catch (e: Exception) {}
     }
 
     fun saveCurrentFile(context: Context) {
-        if (currentUri != null) {
-            try {
-                context.contentResolver.openOutputStream(currentUri!!)?.use { output ->
-                    output.write(codeText.toByteArray())
-                }
-                logToTerminal("ÚLOŽENO přes Android OS: $currentFilePath")
-            } catch (e: Exception) {
-                logToTerminal("CHYBA ukládání URI: ${e.message}")
-            }
-        } else if (currentFilePath != "Nedefinováno") {
-            if (com.codedroid.app.FileHelper.saveFile(currentFilePath, codeText)) {
-                logToTerminal("ÚLOŽENO: $currentFilePath")
-            } else {
-                logToTerminal("CHYBA: Nepodařilo se uložit!")
-            }
-        } else {
-            logToTerminal("CHYBA: Není co uložit.")
+        val tab = getActiveTab() ?: return
+        if (com.codedroid.app.FileHelper.saveFile(tab.path, tab.content)) {
+            openTabs[activeTabIndex] = tab.copy(isModified = false)
+            logToTerminal("ÚLOŽENO: ${tab.name}")
         }
     }
 
-    // FÁZE 10: Termux spouštěč
     fun runCurrentFile(context: Context) {
-        if (currentFilePath == "Nedefinováno") {
-            logToTerminal("CHYBA: Není otevřen žádný soubor ke spuštění.")
-            return
-        }
+        val tab = getActiveTab() ?: return
         saveCurrentFile(context)
-        logToTerminal("SPOUŠTÍM v Termuxu: $currentFilePath")
-        com.codedroid.app.TermuxHelper.runCommand(context, currentFilePath)
+        logToTerminal("SPOUŠTÍM v Termuxu: ${tab.name}")
+        com.codedroid.app.TermuxHelper.runCommand(context, tab.path)
     }
 
-    // FÁZE 8: Cursor-style AI Agent
-    fun askAi(provider: String, prompt: String, apiKey: String) {
-        logToTerminal("[$provider] Odesílám dotaz na server...")
-        settings.apiKey = apiKey 
+    // Cursor Cmd+K (Inline úprava aktuálního souboru)
+    fun runInlineAi(prompt: String) {
+        val tab = getActiveTab() ?: return
+        isInlineAiVisible = false
+        logToTerminal("[Cursor AI] Aplikuji změny na ${tab.name}...")
         
-        chatHistory.add(ChatMessage("user", prompt))
-        chatHistory.add(ChatMessage("ai", "Generuji odpověď..."))
+        val fullPrompt = "Jsi Cursor AI. Uprav tento kód přesně podle instrukcí: '$prompt'. VRAŤ POUZE HOLÝ KÓD BEZ VYSVĚTLIVEK A BEZ MARKDOWN ZNAČEK (\`\`\`).\nKÓD:\n${tab.content}"
         
         CoroutineScope(Dispatchers.Main).launch {
+            val response = AiClient.queryOpenRouter(fullPrompt, settings.apiKey)
+            // Vyčištění případných markdown zbytků od AI
+            val cleanCode = response.replace("```javascript", "").replace("```js", "").replace("```python", "").replace("```", "").trim()
+            updateActiveContent(cleanCode)
+            logToTerminal("[Cursor AI] Kód úspěšně upraven.")
+        }
+    }
+
+    fun askAi(provider: String, prompt: String, apiKey: String) {
+        logToTerminal("[$provider] Odesílám dotaz...")
+        settings.apiKey = apiKey 
+        chatHistory.add(ChatMessage("user", prompt))
+        chatHistory.add(ChatMessage("ai", "Generuji odpověď..."))
+        CoroutineScope(Dispatchers.Main).launch {
             val aiResponse = AiClient.queryOpenRouter(prompt, apiKey)
-            
-            if (chatHistory.isNotEmpty() && chatHistory.last().role == "ai") {
-                chatHistory.removeLast()
-            }
-            
+            if (chatHistory.isNotEmpty() && chatHistory.last().role == "ai") chatHistory.removeLast()
             chatHistory.add(ChatMessage("ai", aiResponse))
-            logToTerminal("[$provider] Odpověď přijata.")
         }
     }
 
