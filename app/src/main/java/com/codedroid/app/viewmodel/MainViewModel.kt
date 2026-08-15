@@ -94,20 +94,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun runCurrentFile(context: Context) {
-        if (currentFilePath == "Nedefinováno") return
-        saveCurrentFile(context)
-        logToTerminal("SPOUŠTÍM: $currentFilePath")
-        val cmd = when {
-            currentFilePath.endsWith(".py") -> "python \"$currentFilePath\""
-            currentFilePath.endsWith(".sh") -> "bash \"$currentFilePath\""
-            currentFilePath.endsWith(".js") -> "node \"$currentFilePath\""
-            else -> "cat \"$currentFilePath\""
-        }
         com.codedroid.app.TermuxHelper.runCommand(context, cmd)
     }
 
     // Skutečná AI integrace (s historií chatu)
+    fun runCurrentFile(context: Context) {
+        if (currentFilePath == "Nedefinováno") {
+            logToTerminal("CHYBA: Není otevřen žádný soubor ke spuštění.")
+            return
+        }
+        saveCurrentFile(context) // Nejdřív uložíme aktuální změny!
+        logToTerminal("SPOUŠTÍM v Termuxu: $currentFilePath")
+        com.codedroid.app.TermuxHelper.runCommand(context, currentFilePath)
+    }
+
     fun askAi(provider: String, prompt: String, apiKey: String) {
         logToTerminal("[$provider] Odesílám dotaz na server...")
         settings.apiKey = apiKey // Uložení klíče
