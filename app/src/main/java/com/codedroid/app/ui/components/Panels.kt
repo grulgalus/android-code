@@ -11,7 +11,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.codedroid.app.DiscordManager
 import com.codedroid.app.GitHelper
 import com.codedroid.app.plugins.PluginManager
 import com.codedroid.app.viewmodel.MainViewModel
@@ -97,8 +96,6 @@ fun SettingsPanel(viewModel: MainViewModel) {
         Text("Integrace", color = Color.White, fontSize = 13.sp)
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = { 
-            DiscordManager.isEnabled = !DiscordManager.isEnabled 
-            viewModel.logToTerminal("Discord RPC: ${DiscordManager.isEnabled}")
         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5865F2))) {
             Text("Zapnout Discord Status", fontSize = 12.sp)
         }
