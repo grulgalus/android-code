@@ -45,6 +45,15 @@ class MainActivity : ComponentActivity() {
         PluginManager.registerLoader(com.codedroid.app.plugins.QuickJsLoader())
         PluginManager.registerLoader(com.codedroid.app.plugins.TermuxBashLoader(this))
 
+        // Automatická kontrola práv na všechny soubory pro Android 11+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R && !android.os.Environment.isExternalStorageManager()) {
+            try {
+                val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                intent.data = android.net.Uri.parse("package:" + packageName)
+                startActivity(intent)
+            } catch(e: Exception) {}
+        }
+
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 val viewModel: MainViewModel = viewModel()
