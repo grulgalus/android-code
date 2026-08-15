@@ -9,32 +9,31 @@ import java.net.URL
 
 object AiClient {
     suspend fun queryOpenRouter(prompt: String, apiKey: String): String = withContext(Dispatchers.IO) {
-        if (apiKey.isBlank()) return@withContext "// CHYBA: Zadejte API Klíč v nastavení AI!"
+        // TADY JE FIX PRO 401: Odstraníme všechny případné mezery a znaky \n na začátku a konci
+        val cleanKey = apiKey.trim()
+        
+        if (cleanKey.isBlank()) return@withContext "// CHYBA: Zadejte API Klíč v nastavení AI!"
 
         try {
-            // OpenRouter API Endpoint
             val url = URL("https://openrouter.ai/api/v1/chat/completions")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Content-Type", "application/json")
-            conn.setRequestProperty("Authorization", "Bearer $apiKey")
-            // OpenRouter vyžaduje referer
+            conn.setRequestProperty("Authorization", "Bearer $cleanKey")
             conn.setRequestProperty("HTTP-Referer", "https://github.com/grulgalus/android-code")
             conn.doOutput = true
 
-            // JSON Body (Posíláme Google Gemini model zdarma přes OpenRouter jako výchozí test)
+            // TADY JE FIX PRO 400: Použijeme jiný spolehlivý model, který je zdarma
             val body = JSONObject().apply {
-                put("model", "google/gemini-2.5-flash-exp") 
+                put("model", "google/gemini-2.0-flash-exp:free") 
                 put("messages", JSONArray().put(JSONObject().apply {
                     put("role", "user")
                     put("content", prompt)
                 }))
             }
 
-            // Odeslání požadavku
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
 
-            // Čtení odpovědi
             if (conn.responseCode == 200) {
                 val responseText = conn.inputStream.bufferedReader().readText()
                 val json = JSONObject(responseText)
@@ -43,7 +42,9 @@ object AiClient {
                     .getJSONObject("message")
                     .getString("content")
             } else {
-                "// CHYBA API: ${conn.responseMessage} (Kód: ${conn.responseCode})"
+                // Přidáme i chybovou hlášku přímo z těla odpovědi, abychom přesně věděli, co se OpenRouteru nelíbí
+                val errorBody = conn.errorStream?.bufferedReader()?.readText() ?: "Žádný detajl"
+                "// CHYBA API: ${conn.responseMessage} (Kód: ${conn.responseCode})\n// Detail: $errorBody"
             }
         } catch (e: Exception) {
             "// CHYBA SÍTĚ: ${e.localizedMessage}"
