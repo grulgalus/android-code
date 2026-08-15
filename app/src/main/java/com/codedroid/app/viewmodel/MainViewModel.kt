@@ -6,18 +6,19 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.*
-import androidx.compose.runtime.mutableStateListOf
 import com.codedroid.app.SettingsManager
 import com.codedroid.app.AiClient
 
-data class ChatMessage(val role: String, val content: String)
 enum class Panel { EXPLORER, GIT, EXTENSIONS, AI_AGENT, SETTINGS }
+
+data class ChatMessage(val role: String, val content: String)
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     val settings = SettingsManager(application)
@@ -31,13 +32,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var currentUri by mutableStateOf<Uri?>(null)
         private set
     var terminalLogs by mutableStateOf(listOf("> CodeDroid X inicializováno [${time()}]"))
-    var chatHistory = mutableStateListOf<ChatMessage>()
         private set
+        
+    // Chatovací historie pro Cursor-style AI panel
+    var chatHistory = mutableStateListOf<ChatMessage>()
         private set
 
     fun updateActivePanel(panel: Panel) { activePanel = panel }
+    
     fun updateCode(newCode: String) { codeText = newCode }
+    
     fun appendCode(code: String) { codeText += "\n$code" }
+    
     fun logToTerminal(msg: String) { terminalLogs = terminalLogs + "[${time()}] $msg" }
 
     fun loadFile(path: String) {
@@ -101,20 +107,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         com.codedroid.app.TermuxHelper.runCommand(context, cmd)
     }
 
-    }
-
+    // Skutečná AI integrace (s historií chatu)
     fun askAi(provider: String, prompt: String, apiKey: String) {
         logToTerminal("[$provider] Odesílám dotaz na server...")
-        settings.apiKey = apiKey
+        settings.apiKey = apiKey // Uložení klíče
+        
+        // Zapsání do chatu
         chatHistory.add(ChatMessage("user", prompt))
         chatHistory.add(ChatMessage("ai", "Generuji odpověď..."))
         
+        // Asynchronní volání API
         CoroutineScope(Dispatchers.Main).launch {
             val aiResponse = AiClient.queryOpenRouter(prompt, apiKey)
-            chatHistory.removeLast() // Smaže text "Generuji odpověď..."
+            
+            // Smažeme text "Generuji odpověď..."
+            if (chatHistory.isNotEmpty() && chatHistory.last().role == "ai") {
+                chatHistory.removeLast()
+            }
+            
+            // Vložíme reálnou odpověď
             chatHistory.add(ChatMessage("ai", aiResponse))
             logToTerminal("[$provider] Odpověď přijata.")
         }
     }
+
     private fun time(): String = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 }
