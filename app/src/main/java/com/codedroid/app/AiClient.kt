@@ -25,7 +25,7 @@ object AiClient {
 
             // TADY JE FIX PRO 400: Použijeme jiný spolehlivý model, který je zdarma
             val body = JSONObject().apply {
-                put("model", "qwen/qwen-2.5-coder-32b-instruct:free") 
+                put("model", "meta-llama/llama-3.1-8b-instruct:free") 
                 put("messages", JSONArray().put(JSONObject().apply {
                     put("role", "user")
                     put("content", prompt)

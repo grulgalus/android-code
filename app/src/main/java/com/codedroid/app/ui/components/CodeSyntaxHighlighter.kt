@@ -22,29 +22,36 @@ class CodeSyntaxHighlighter : VisualTransformation {
         return buildAnnotatedString {
             append(code)
             
-            // Definice barev inspirované VS Code (Dark Theme)
-            val keywordStyle = SpanStyle(color = Color(0xFFC586C0), fontWeight = FontWeight.Bold) // Fialová
-            val stringStyle = SpanStyle(color = Color(0xFFCE9178)) // Oranžová
-            val commentStyle = SpanStyle(color = Color(0xFF6A9955)) // Zelená
-            val functionStyle = SpanStyle(color = Color(0xFFDCDCAA)) // Žlutá
-            val numberStyle = SpanStyle(color = Color(0xFFB5CEA8)) // Zelenkavá
-            val typeStyle = SpanStyle(color = Color(0xFF4EC9B0)) // Modrozelená (Třídy/Typy)
+            val keywordStyle = SpanStyle(color = Color(0xFFC586C0), fontWeight = FontWeight.Bold) 
+            val stringStyle = SpanStyle(color = Color(0xFFCE9178)) 
+            val commentStyle = SpanStyle(color = Color(0xFF6A9955)) 
+            val functionStyle = SpanStyle(color = Color(0xFFDCDCAA)) 
+            val numberStyle = SpanStyle(color = Color(0xFFB5CEA8)) 
+            val typeStyle = SpanStyle(color = Color(0xFF4EC9B0)) 
 
-            // Regulární výrazy pro různé elementy kódu
-            val keywords = Pattern.compile("\\b(package|import|class|fun|val|var|if|else|for|while|return|when|try|catch|finally|interface|object|typealias|const|public|private|protected|internal|override)\\b")
-            val strings = Pattern.compile("\".*?\"|\'.*?\'")
-            val comments = Pattern.compile("//.*|/\\*.*?\\*/", Pattern.DOTALL)
-            val numbers = Pattern.compile("\\b\\d+\\b")
+            // Klíčová slova (JS, TS, Kotlin, Python...)
+            val keywords = Pattern.compile("\\b(const|let|package|import|class|fun|val|var|if|else|for|while|return|when|try|catch|finally|interface|object|typealias|function|public|private)\\b")
             val functions = Pattern.compile("\\b[a-zA-Z_][a-zA-Z0-9_]*(?=\\s*\$)")
             val types = Pattern.compile("(?<=:\\s)[A-Z][a-zA-Z0-9_]*|\\b[A-Z][a-zA-Z0-9_]*(?=\\s*\\{)")
+            val numbers = Pattern.compile("\\b\\d+\\b")
+            val strings = Pattern.compile("\".*?\"|'.*?'|`.*?`")
+            
+            // OPRAVA KOMENTÁŘŮ: 
+            // 1. Jednořádkové komentáře se ZASTAVÍ na konci řádku (bez Pattern.DOTALL)
+            val singleLineComments = Pattern.compile("//.*")
+            // 2. Víceřádkové komentáře: [\s\S] znamená absolutně cokoliv včetně nových řádků
+            val multiLineComments = Pattern.compile("/\\*[\\s\\S]*?\\*/")
 
-            // Aplikace stylů
+            // Pořadí je extrémně důležité! Komentáře a stringy přepisují vše ostatní.
             applyStyle(code, keywords, keywordStyle)
             applyStyle(code, functions, functionStyle)
             applyStyle(code, types, typeStyle)
             applyStyle(code, numbers, numberStyle)
+            
             applyStyle(code, strings, stringStyle)
-            applyStyle(code, comments, commentStyle) // Komentáře musí být poslední, aby přepsaly vše uvnitř
+            
+            applyStyle(code, singleLineComments, commentStyle)
+            applyStyle(code, multiLineComments, commentStyle)
         }
     }
 
