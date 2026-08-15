@@ -8,11 +8,11 @@ object DiscordManager {
     fun updatePresence(viewModel: MainViewModel) {
         if (!isEnabled) return
         
-        val fileName = viewModel.currentFilePath.substringAfterLast("/")
-        val statusText = if (fileName == "Nedefinováno") {
+        val activeTab = viewModel.getActiveTab()
+        val statusText = if (activeTab == null || activeTab.name == "Bez_názvu.txt") {
             "Chiluje v CodeDroid X"
         } else {
-            "Upravuje $fileName"
+            "Upravuje ${activeTab.name}"
         }
         
         viewModel.logToTerminal("[Discord RPC] Status: $statusText")

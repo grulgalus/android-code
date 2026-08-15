@@ -45,6 +45,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun getActiveTab(): EditorTab? = if (activeTabIndex in openTabs.indices) openTabs[activeTabIndex] else null
 
     fun updateActiveContent(newCode: String) {
+    fun appendCode(code: String) {
+        val tab = getActiveTab()
+        if (tab != null) {
+            openTabs[activeTabIndex] = tab.copy(content = tab.content + "\n" + code, isModified = true)
+        }
+    }
         val tab = getActiveTab()
         if (tab != null) {
             // Aby Compose zaregistroval změnu, musíme objekt nahradit
@@ -115,7 +121,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         isInlineAiVisible = false
         logToTerminal("[Cursor AI] Aplikuji změny na ${tab.name}...")
         
-        val fullPrompt = "Jsi Cursor AI. Uprav tento kód přesně podle instrukcí: '$prompt'. VRAŤ POUZE HOLÝ KÓD BEZ VYSVĚTLIVEK A BEZ MARKDOWN ZNAČEK (\`\`\`).\nKÓD:\n${tab.content}"
+        val fullPrompt = "Jsi Cursor AI. Uprav tento kód přesně podle instrukcí: '$prompt'. VRAŤ POUZE HOLÝ KÓD BEZ VYSVĚTLIVEK A BEZ MARKDOWN ZNAČEK (```).\nKÓD:\n${tab.content}"
         
         CoroutineScope(Dispatchers.Main).launch {
             val response = AiClient.queryOpenRouter(fullPrompt, settings.apiKey)
