@@ -5,17 +5,17 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.FileOpen
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,27 +38,25 @@ import com.codedroid.app.viewmodel.MainViewModel
 import com.codedroid.app.viewmodel.Panel
 
 class MainActivity : ComponentActivity() {
-    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         PluginManager.registerLoader(com.codedroid.app.plugins.QuickJsLoader())
         PluginManager.registerLoader(com.codedroid.app.plugins.TermuxBashLoader(this))
 
-        // Automatická kontrola práv na všechny soubory pro Android 11+
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R && !android.os.Environment.isExternalStorageManager()) {
-            try {
-                val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                intent.data = android.net.Uri.parse("package:" + packageName)
-                startActivity(intent)
-            } catch(e: Exception) {}
-        }
-
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 val viewModel: MainViewModel = viewModel()
                 
-                // --- INTENT HANDLER (OS "Open with CodeDroid") ---
+                // Automatická kontrola práv na všechny soubory pro Android 11+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R && !android.os.Environment.isExternalStorageManager()) {
+                    try {
+                        val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                        intent.data = android.net.Uri.parse("package:$packageName")
+                        startActivity(intent)
+                    } catch(e: Exception) {}
+                }
+
                 LaunchedEffect(intent) {
                     val incomingUri = intent.data
                     if (incomingUri != null) {
@@ -125,11 +123,27 @@ fun VSCodeWorkspace(viewModel: MainViewModel) {
             }
         }
 
-        Column(modifier = Modifier.fillMaxWidth().height(180.dp).background(VSCodeTheme.bgDark)) {
+        // TADY JE OPRAVENÝ TERMINÁL
+        Column(modifier = Modifier.fillMaxWidth().height(160.dp).background(VSCodeTheme.bgDark)) {
             Divider(color = VSCodeTheme.bgActivityBar, thickness = 1.dp)
-            Text("TERMINAL", color = Color.White, fontSize = 11.sp, modifier = Modifier.padding(16.dp, 8.dp), fontWeight = FontWeight.Bold)
-            LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-                items(viewModel.terminalLogs) { log -> Text(log, color = VSCodeTheme.terminalGreen, fontSize = 12.sp); Spacer(Modifier.height(2.dp)) }
+            Text("KONZOLE / LOGY", color = Color.White, fontSize = 11.sp, modifier = Modifier.padding(16.dp, 8.dp), fontWeight = FontWeight.Bold)
+            
+            val listState = rememberLazyListState()
+            val logs = viewModel.terminalLogs
+            
+            // KOUZLO PRO AUTO-SCROLL DOWN
+            LaunchedEffect(logs.size) {
+                if (logs.isNotEmpty()) {
+                    listState.animateScrollToItem(logs.size - 1)
+                }
+            }
+            
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                items(logs) { log -> 
+                    // Nově používáme FontFamily.Monospace pro konzolový vzhled
+                    Text(log, color = VSCodeTheme.terminalGreen, fontSize = 12.sp, fontFamily = FontFamily.Monospace) 
+                    Spacer(Modifier.height(4.dp)) 
+                }
             }
         }
     }
