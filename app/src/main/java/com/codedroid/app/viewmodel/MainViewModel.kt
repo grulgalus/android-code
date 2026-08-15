@@ -12,9 +12,11 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.*
+import androidx.compose.runtime.mutableStateListOf
 import com.codedroid.app.SettingsManager
 import com.codedroid.app.AiClient
 
+data class ChatMessage(val role: String, val content: String)
 enum class Panel { EXPLORER, GIT, EXTENSIONS, AI_AGENT, SETTINGS }
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -29,6 +31,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var currentUri by mutableStateOf<Uri?>(null)
         private set
     var terminalLogs by mutableStateOf(listOf("> CodeDroid X inicializováno [${time()}]"))
+    var chatHistory = mutableStateListOf<ChatMessage>()
+        private set
         private set
 
     fun updateActivePanel(panel: Panel) { activePanel = panel }
@@ -97,15 +101,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         com.codedroid.app.TermuxHelper.runCommand(context, cmd)
     }
 
+    }
+
     fun askAi(provider: String, prompt: String, apiKey: String) {
         logToTerminal("[$provider] Odesílám dotaz na server...")
-        settings.apiKey = apiKey // Uložení klíče
+        settings.apiKey = apiKey
+        chatHistory.add(ChatMessage("user", prompt))
+        chatHistory.add(ChatMessage("ai", "Generuji odpověď..."))
+        
         CoroutineScope(Dispatchers.Main).launch {
             val aiResponse = AiClient.queryOpenRouter(prompt, apiKey)
-            appendCode("\n// --- AI ODPOVĚĎ ($provider) ---\n$aiResponse")
+            chatHistory.removeLast() // Smaže text "Generuji odpověď..."
+            chatHistory.add(ChatMessage("ai", aiResponse))
             logToTerminal("[$provider] Odpověď přijata.")
         }
     }
-
     private fun time(): String = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 }

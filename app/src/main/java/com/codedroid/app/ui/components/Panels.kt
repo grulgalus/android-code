@@ -66,6 +66,22 @@ fun ExtensionsPanel(viewModel: MainViewModel) {
 fun SettingsPanel(viewModel: MainViewModel) {
     Column {
         Text("NASTAVENÍ", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        // --- OPRÁVNĚNÍ SOUBORŮ --- 
+        val context = androidx.compose.ui.platform.LocalContext.current
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Systémová Práva", color = Color.White, fontSize = 13.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = {
+            try {
+                val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                intent.data = android.net.Uri.parse("package:" + context.packageName)
+                context.startActivity(intent)
+            } catch(e: Exception) {
+                viewModel.logToTerminal("Nelze otevřít nastavení. Zkuste to ručně v nastavení Androidu.")
+            }
+        }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828))) {
+            Text("Povolit přístup k Úložišti", fontSize = 12.sp)
+        }
         Spacer(modifier = Modifier.height(16.dp))
         
         Text("Vzhled Editoru", color = Color.White, fontSize = 13.sp)
