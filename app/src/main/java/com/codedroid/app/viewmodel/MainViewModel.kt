@@ -19,6 +19,7 @@ enum class Panel { EXPLORER, GIT, EXTENSIONS, AI_AGENT, SETTINGS }
 
 class MainViewModel(application: Application) : AndroidViewModel(application) { {
     val settings = SettingsManager(application)
+    val settings = SettingsManager(application)
     var activePanel by mutableStateOf(Panel.EXPLORER)
         private set
     var codeText by mutableStateOf("// CodeDroid X Ready!\n")
@@ -103,6 +104,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) { 
     // ZÁKLAD PRO AI API VOLÁNÍ
     }
 
+    }
     fun askAi(provider: String, prompt: String, apiKey: String) {
         logToTerminal("[$provider] Odesílám dotaz na server...")
         settings.apiKey = apiKey // Uložení klíče pro příště
