@@ -5,7 +5,6 @@ import com.codedroid.app.viewmodel.MainViewModel
 object DiscordManager {
     var isEnabled: Boolean = false
 
-    // Aktualizuje status podle toho, co zrovna děláš
     fun updatePresence(viewModel: MainViewModel) {
         if (!isEnabled) return
         
@@ -16,7 +15,6 @@ object DiscordManager {
             "Upravuje $fileName"
         }
         
-        // Zde se v budoucnu napojí Discord Webhook nebo API
         viewModel.logToTerminal("[Discord RPC] Status: $statusText")
     }
 }

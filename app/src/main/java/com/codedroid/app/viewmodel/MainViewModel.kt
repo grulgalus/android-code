@@ -1,12 +1,10 @@
 package com.codedroid.app.viewmodel
 
+import android.app.Application
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import com.codedroid.app.SettingsManager
-import com.codedroid.app.AiClient
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -14,12 +12,14 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.*
+import com.codedroid.app.SettingsManager
+import com.codedroid.app.AiClient
 
 enum class Panel { EXPLORER, GIT, EXTENSIONS, AI_AGENT, SETTINGS }
 
-class MainViewModel(application: Application) : AndroidViewModel(application) { {
+class MainViewModel(application: Application) : AndroidViewModel(application) {
     val settings = SettingsManager(application)
-    val settings = SettingsManager(application)
+
     var activePanel by mutableStateOf(Panel.EXPLORER)
         private set
     var codeText by mutableStateOf("// CodeDroid X Ready!\n")
@@ -36,7 +36,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) { 
     fun appendCode(code: String) { codeText += "\n$code" }
     fun logToTerminal(msg: String) { terminalLogs = terminalLogs + "[${time()}] $msg" }
 
-    // Načítání přes absolutní cestu (starý způsob pro root)
     fun loadFile(path: String) {
         currentFilePath = path
         currentUri = null
@@ -44,7 +43,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) { 
         logToTerminal("Otevřen soubor: $path")
     }
 
-    // NOVÉ: Načítání a správa přes Android Storage Access Framework (URI)
     fun loadFromUri(context: Context, uri: Uri) {
         try {
             val cursor = context.contentResolver.query(uri, null, null, null, null)
@@ -67,7 +65,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) { 
 
     fun saveCurrentFile(context: Context) {
         if (currentUri != null) {
-            // Ukládání zpět do souboru otevřeného přes Android (Intent/Picker)
             try {
                 context.contentResolver.openOutputStream(currentUri!!)?.use { output ->
                     output.write(codeText.toByteArray())
@@ -77,7 +74,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) { 
                 logToTerminal("CHYBA ukládání URI: ${e.message}")
             }
         } else if (currentFilePath != "Nedefinováno") {
-            // Standardní ukládání přes absolutní cestu
             if (com.codedroid.app.FileHelper.saveFile(currentFilePath, codeText)) {
                 logToTerminal("ÚLOŽENO: $currentFilePath")
             } else {
@@ -101,19 +97,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) { 
         com.codedroid.app.TermuxHelper.runCommand(context, cmd)
     }
 
-    // ZÁKLAD PRO AI API VOLÁNÍ
-    }
-
-    }
     fun askAi(provider: String, prompt: String, apiKey: String) {
         logToTerminal("[$provider] Odesílám dotaz na server...")
-        settings.apiKey = apiKey // Uložení klíče pro příště
+        settings.apiKey = apiKey // Uložení klíče
         CoroutineScope(Dispatchers.Main).launch {
-            // Zavolání reálného API přes síť (ve vlákně na pozadí)
             val aiResponse = AiClient.queryOpenRouter(prompt, apiKey)
-            appendCode("\n// --- AI ODPOVĚĎ ($provider) ---\n" + aiResponse)
-            logToTerminal("[$provider] Odpověď přijata a vložena do editoru.")
+            appendCode("\n// --- AI ODPOVĚĎ ($provider) ---\n$aiResponse")
+            logToTerminal("[$provider] Odpověď přijata.")
         }
     }
+
     private fun time(): String = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 }
