@@ -16,7 +16,7 @@ import com.codedroid.app.viewmodel.MainViewModel
 
 @Composable
 fun AiAgentPanel(viewModel: MainViewModel) {
-    var apiKey by remember { mutableStateOf("") }
+    var apiKey by remember { mutableStateOf(viewModel.settings.apiKey) }
     var prompt by remember { mutableStateOf("") }
     val providers = listOf("OpenRouter", "Google Gemini", "OpenAI", "Anthropic", "Ollama")
     var selectedProvider by remember { mutableStateOf(providers[0]) }

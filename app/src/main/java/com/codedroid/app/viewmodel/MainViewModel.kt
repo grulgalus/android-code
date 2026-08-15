@@ -3,7 +3,10 @@ package com.codedroid.app.viewmodel
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import com.codedroid.app.SettingsManager
+import com.codedroid.app.AiClient
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -14,7 +17,8 @@ import kotlinx.coroutines.*
 
 enum class Panel { EXPLORER, GIT, EXTENSIONS, AI_AGENT, SETTINGS }
 
-class MainViewModel : ViewModel() {
+class MainViewModel(application: Application) : AndroidViewModel(application) { {
+    val settings = SettingsManager(application)
     var activePanel by mutableStateOf(Panel.EXPLORER)
         private set
     var codeText by mutableStateOf("// CodeDroid X Ready!\n")
@@ -97,17 +101,17 @@ class MainViewModel : ViewModel() {
     }
 
     // ZÁKLAD PRO AI API VOLÁNÍ
-    fun askAi(provider: String, prompt: String, apiKey: String) {
-        logToTerminal("[$provider] Dotazuji se AI...")
-        // Zde budeme ve fázi 7 posílat reálný HTTP Ktor Request
-        // Prozatím ukázka asynchronního kódu
-        CoroutineScope(Dispatchers.Main).launch {
-            delay(1500) // Simulace čekání na síť
-            val mockResponse = "// AI Odpověď od $provider na: $prompt\nfun generatedFunction() {\n    println(\"Hotovo!\")\n}"
-            appendCode(mockResponse)
-            logToTerminal("[$provider] Kód úspěšně vygenerován.")
-        }
     }
 
+    fun askAi(provider: String, prompt: String, apiKey: String) {
+        logToTerminal("[$provider] Odesílám dotaz na server...")
+        settings.apiKey = apiKey // Uložení klíče pro příště
+        CoroutineScope(Dispatchers.Main).launch {
+            // Zavolání reálného API přes síť (ve vlákně na pozadí)
+            val aiResponse = AiClient.queryOpenRouter(prompt, apiKey)
+            appendCode("\n// --- AI ODPOVĚĎ ($provider) ---\n" + aiResponse)
+            logToTerminal("[$provider] Odpověď přijata a vložena do editoru.")
+        }
+    }
     private fun time(): String = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 }
